@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"flag"
+	"sort"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -23,37 +26,64 @@ type ICMP struct {
 }
 
 func main() {
-	wg.Add(1)
-	go CheckIP()
-	CheckIP()
-	wg.Wait()
+	isVerbose := false
+	flag.BoolVar(&isVerbose, "v", false, "be verbose")
+	flag.Parse()
+	args := flag.Args()
+	if len(args) < 1 {
+		fmt.Printf("使用方法：%s [-v] <网络号>/<CIDR>\n", os.Args[0])
+		os.Exit(-1)
+	}
+	CheckIP(os.Args[1], isVerbose)
 }
 
-func CheckIP() {
-	defer wg.Done()
+func CheckIP(subnet string, isVerbose bool) {
 	var usedIP []string
 	var unusedIP []string
 	t := time.Now()
-	hosts, _ := hosts("10.150.1.1/24")
+	hosts, _ := getAllHostsFromCIDR(subnet)
 	for _, ip := range hosts {
 		tmp := ip
+		time.Sleep(500)
+		wg.Add(1)
 		go func(data string) {
-			bool := ping(data)
-			if bool {
+			defer wg.Done()
+			isUsed := ping(data)
+			if isUsed {
 				usedIP = append(usedIP, data)
-				fmt.Println("已使用IP：", usedIP)
+				if isVerbose {
+					fmt.Println("已使用IP：", usedIP)
+				}
 			} else {
 				unusedIP = append(unusedIP, data)
-				fmt.Println("未使用IP：", unusedIP)
+				if isVerbose {
+					fmt.Println("未使用IP：", unusedIP)
+				}
 			}
 		}(tmp)
 	}
 	wg.Wait()
 	elapsed := time.Since(t)
 	fmt.Println("IP扫描完成,耗时", elapsed)
+	fmt.Println("已使用IP：", sortIPList(usedIP))
+	fmt.Println("未使用IP：", sortIPList(unusedIP))
 }
 
-func hosts(cidr string) ([]string, error) {
+func sortIPList(ipStrings []string) (result []string) {
+	var ips []net.IP
+	for _, ipString := range ipStrings {
+		ips = append(ips, net.ParseIP(ipString))
+	}
+	sort.Slice(ips, func(i, j int) bool {
+		return bytes.Compare(ips[i], ips[j]) < 0
+	})
+	for _, ip := range ips {
+		result = append(result, ip.String())
+	}
+	return
+}
+
+func getAllHostsFromCIDR(cidr string) ([]string, error) {
 	ip, ipnet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, err
@@ -93,8 +123,7 @@ func ping(ip string) bool {
 	buffer.Reset()
 	binary.Write(&buffer, binary.BigEndian, icmp)
 
-	Time, _ := time.ParseDuration("1s")
-	conn, err := net.DialTimeout("ip4:icmp", ip, Time)
+	conn, err := net.DialTimeout("ip4:icmp", ip, 1 * time.Second)
 	if err != nil {
 		return false
 	}
