@@ -57,7 +57,7 @@ func CheckIP(subnet string, isVerbose bool) {
 				}
 				usedIP[old] = data
 				if isVerbose {
-					fmt.Println("已使用IP：", usedIP[:usedIndex])
+					fmt.Println("已使用IP：", data)
 				}
 			} else {
 				old := atomic.LoadInt64(&unusedIndex)
@@ -66,7 +66,7 @@ func CheckIP(subnet string, isVerbose bool) {
 				}
 				unusedIP[old] = data
 				if isVerbose {
-					fmt.Println("未使用IP：", unusedIP[:unusedIndex])
+					fmt.Println("未使用IP：", data)
 				}
 			}
 		}(ip)
