@@ -24,31 +24,35 @@ type ICMP struct {
 
 func main() {
 	wg.Add(1)
-	go CheckIP()
-	CheckIP()
+	go func() {
+		CheckIP()
+		wg.Done()
+	}()
 	wg.Wait()
+	CheckIP()
 }
 
 func CheckIP() {
-	defer wg.Done()
-	var usedIP []string
-	var unusedIP []string
+	checkerGroup := &sync.WaitGroup{}
 	t := time.Now()
 	hosts, _ := hosts("10.150.1.1/24")
+	usedIP := make([]string, 0, len(hosts))
+	unusedIP := make([]string, 0, len(hosts))
 	for _, ip := range hosts {
-		tmp := ip
+		checkerGroup.Add(1)
 		go func(data string) {
-			bool := ping(data)
-			if bool {
+			pong := ping(data)
+			if pong {
 				usedIP = append(usedIP, data)
-				fmt.Println("已使用IP：", usedIP)
 			} else {
 				unusedIP = append(unusedIP, data)
-				fmt.Println("未使用IP：", unusedIP)
 			}
-		}(tmp)
+			checkerGroup.Done()
+		}(ip)
 	}
-	wg.Wait()
+	checkerGroup.Wait()
+	fmt.Println("已使用IP：", usedIP)
+	fmt.Println("未使用IP：", unusedIP)
 	elapsed := time.Since(t)
 	fmt.Println("IP扫描完成,耗时", elapsed)
 }
@@ -111,11 +115,7 @@ func ping(ip string) bool {
 
 	conn.SetReadDeadline(time.Time{})
 
-	if string(recvBuf[0:num]) != "" {
-		return true
-	}
-	return false
-
+	return string(recvBuf[0:num]) != ""
 }
 
 func CheckSum(data []byte) uint16 {
