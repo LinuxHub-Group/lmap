@@ -36,26 +36,25 @@ func main() {
 }
 
 func CheckIP(subnet string, isVerbose bool) {
-	var usedIP []string
-	var unusedIP []string
 	checkerGroup := &sync.WaitGroup{}
 	t := time.Now()
 	hosts, _ := getAllHostsFromCIDR(subnet)
+	usedIPChan := make(chan string, len(hosts))
+	unusedIPChan := make(chan string, len(hosts))
 	for _, ip := range hosts {
-		time.Sleep(500)
 		checkerGroup.Add(1)
-		go func(data string) {
+		go func(ip string) {
 			defer checkerGroup.Done()
-			isUsed := ping(data)
+			isUsed := ping(ip)
 			if isUsed {
-				usedIP = append(usedIP, data)
+				usedIPChan <- ip
 				if isVerbose {
-					fmt.Println("已使用IP：", usedIP)
+					fmt.Println("已使用IP：", ip)
 				}
 			} else {
-				unusedIP = append(unusedIP, data)
+				unusedIPChan <- ip
 				if isVerbose {
-					fmt.Println("未使用IP：", unusedIP)
+					fmt.Println("未使用IP：", ip)
 				}
 			}
 		}(ip)
@@ -63,6 +62,16 @@ func CheckIP(subnet string, isVerbose bool) {
 	checkerGroup.Wait()
 	elapsed := time.Since(t)
 	fmt.Println("IP扫描完成,耗时", elapsed)
+	usedIP := make([]string, 0, len(hosts))
+	unusedIP := make([]string, 0, len(hosts))
+	close(usedIPChan)
+	close(unusedIPChan)
+	for ipString := range usedIPChan {
+		usedIP = append(usedIP, ipString)
+	}
+	for ipString := range unusedIPChan {
+		unusedIP = append(unusedIP, ipString)
+	}
 	fmt.Println("已使用IP：", sortIPList(usedIP))
 	fmt.Println("未使用IP：", sortIPList(unusedIP))
 }
