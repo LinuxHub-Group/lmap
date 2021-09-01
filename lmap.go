@@ -15,8 +15,6 @@ import (
 
 var icmp ICMP
 
-var wg sync.WaitGroup
-
 type ICMP struct {
 	Type        uint8
 	Code        uint8
@@ -34,20 +32,20 @@ func main() {
 		fmt.Printf("使用方法：%s [-v] <网络号>/<CIDR>\n", os.Args[0])
 		os.Exit(-1)
 	}
-	CheckIP(os.Args[1], isVerbose)
+	CheckIP(args[0], isVerbose)
 }
 
 func CheckIP(subnet string, isVerbose bool) {
 	var usedIP []string
 	var unusedIP []string
+	checkerGroup := &sync.WaitGroup{}
 	t := time.Now()
 	hosts, _ := getAllHostsFromCIDR(subnet)
 	for _, ip := range hosts {
-		tmp := ip
 		time.Sleep(500)
-		wg.Add(1)
+		checkerGroup.Add(1)
 		go func(data string) {
-			defer wg.Done()
+			defer checkerGroup.Done()
 			isUsed := ping(data)
 			if isUsed {
 				usedIP = append(usedIP, data)
@@ -60,9 +58,9 @@ func CheckIP(subnet string, isVerbose bool) {
 					fmt.Println("未使用IP：", unusedIP)
 				}
 			}
-		}(tmp)
+		}(ip)
 	}
-	wg.Wait()
+	checkerGroup.Wait()
 	elapsed := time.Since(t)
 	fmt.Println("IP扫描完成,耗时", elapsed)
 	fmt.Println("已使用IP：", sortIPList(usedIP))
@@ -140,11 +138,7 @@ func ping(ip string) bool {
 
 	conn.SetReadDeadline(time.Time{})
 
-	if string(recvBuf[0:num]) != "" {
-		return true
-	}
-	return false
-
+	return string(recvBuf[0:num]) != ""
 }
 
 func CheckSum(data []byte) uint16 {
