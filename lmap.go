@@ -1,19 +1,18 @@
 package main
 
 import (
-	"os"
-	"flag"
-	"sort"
 	"bytes"
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
-
-var icmp ICMP
 
 type ICMP struct {
 	Type        uint8
@@ -36,11 +35,15 @@ func main() {
 }
 
 func CheckIP(subnet string, isVerbose bool) {
-	var usedIP []string
-	var unusedIP []string
 	checkerGroup := &sync.WaitGroup{}
 	t := time.Now()
 	hosts, _ := getAllHostsFromCIDR(subnet)
+	usedIP := make([]string, len(hosts))
+	unusedIP := make([]string, len(hosts))
+	var (
+		usedIndex   int64 = 0
+		unusedIndex int64 = 0
+	)
 	for _, ip := range hosts {
 		time.Sleep(500)
 		checkerGroup.Add(1)
@@ -48,14 +51,22 @@ func CheckIP(subnet string, isVerbose bool) {
 			defer checkerGroup.Done()
 			isUsed := ping(data)
 			if isUsed {
-				usedIP = append(usedIP, data)
+				old := atomic.LoadInt64(&usedIndex)
+				for !atomic.CompareAndSwapInt64(&usedIndex, old, old+1) {
+					old = atomic.LoadInt64(&usedIndex)
+				}
+				usedIP[old] = data
 				if isVerbose {
-					fmt.Println("已使用IP：", usedIP)
+					fmt.Println("已使用IP：", usedIP[:usedIndex])
 				}
 			} else {
-				unusedIP = append(unusedIP, data)
+				old := atomic.LoadInt64(&unusedIndex)
+				for !atomic.CompareAndSwapInt64(&unusedIndex, old, old+1) {
+					old = atomic.LoadInt64(&unusedIndex)
+				}
+				unusedIP[old] = data
 				if isVerbose {
-					fmt.Println("未使用IP：", unusedIP)
+					fmt.Println("未使用IP：", unusedIP[:unusedIndex])
 				}
 			}
 		}(ip)
@@ -63,8 +74,8 @@ func CheckIP(subnet string, isVerbose bool) {
 	checkerGroup.Wait()
 	elapsed := time.Since(t)
 	fmt.Println("IP扫描完成,耗时", elapsed)
-	fmt.Println("已使用IP：", sortIPList(usedIP))
-	fmt.Println("未使用IP：", sortIPList(unusedIP))
+	fmt.Println("已使用IP：", sortIPList(usedIP[:usedIndex]))
+	fmt.Println("未使用IP：", sortIPList(unusedIP[:unusedIndex]))
 }
 
 func sortIPList(ipStrings []string) (result []string) {
@@ -104,12 +115,9 @@ func inc(ip net.IP) {
 }
 
 func ping(ip string) bool {
+	var icmp ICMP
 	//开始填充数据包
 	icmp.Type = 8 //8->echo message  0->reply message
-	icmp.Code = 0
-	icmp.Checksum = 0
-	icmp.Identifier = 0
-	icmp.SequenceNum = 0
 
 	recvBuf := make([]byte, 32)
 	var buffer bytes.Buffer
@@ -121,7 +129,7 @@ func ping(ip string) bool {
 	buffer.Reset()
 	binary.Write(&buffer, binary.BigEndian, icmp)
 
-	conn, err := net.DialTimeout("ip4:icmp", ip, 1 * time.Second)
+	conn, err := net.DialTimeout("ip4:icmp", ip, 1*time.Second)
 	if err != nil {
 		return false
 	}
