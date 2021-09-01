@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/LinuxHub-Group/lmap/lib/lmap"
+	"github.com/LinuxHub-Group/lmap/pkg/lmap"
 	"os"
 )
 
