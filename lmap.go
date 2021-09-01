@@ -31,8 +31,8 @@ func main() {
 
 func CheckIP() {
 	defer wg.Done()
-	var use []string
-	var notuse []string
+	var usedIP []string
+	var unusedIP []string
 	t := time.Now()
 	hosts, _ := hosts("10.150.1.1/24")
 	for _, ip := range hosts {
@@ -40,11 +40,11 @@ func CheckIP() {
 		go func(data string) {
 			bool := ping(data)
 			if bool {
-				use = append(use, data)
-				fmt.Println("已使用IP：", use)
+				usedIP = append(usedIP, data)
+				fmt.Println("已使用IP：", usedIP)
 			} else {
-				notuse = append(notuse, data)
-				fmt.Println("未使用IP：", notuse)
+				unusedIP = append(unusedIP, data)
+				fmt.Println("未使用IP：", unusedIP)
 			}
 		}(tmp)
 	}
