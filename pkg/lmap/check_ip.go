@@ -40,9 +40,9 @@ func CheckIP(subnet string, isVerbose bool) {
 			hosts[index].isUsed = Ping(hosts[index].host)
 			if isVerbose {
 				if hosts[index].isUsed {
-					println("已使用IP：", hosts[index].host.String())
+					fmt.Println("已使用IP：", hosts[index].host.String())
 				} else {
-					println("未使用IP：", hosts[index].host.String())
+					fmt.Println("未使用IP：", hosts[index].host.String())
 				}
 			}
 		}(index)
@@ -60,8 +60,8 @@ func printIPList(hosts []HostInfo, boolFilter bool) {
 
 	position := 1
 
-	for _,hostInfo :=range hosts{
-		if boolFilter==hostInfo.isUsed {
+	for _, hostInfo := range hosts {
+		if boolFilter == hostInfo.isUsed {
 			fmt.Print(hostInfo.host.String())
 			if position%OUTPUT_IP_PER_LINE == 0 {
 				fmt.Println()
@@ -71,5 +71,5 @@ func printIPList(hosts []HostInfo, boolFilter bool) {
 			position++
 		}
 	}
-	fmt.Println("")
+	fmt.Println()
 }

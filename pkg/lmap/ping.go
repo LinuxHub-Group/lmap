@@ -35,11 +35,11 @@ func Ping(ip net.IP) bool {
 	var buffer bytes.Buffer
 
 	//先在buffer中写入icmp数据报求去校验和
-	binary.Write(&buffer, binary.BigEndian, icmp)
+	_ = binary.Write(&buffer, binary.BigEndian, icmp)
 	icmp.Checksum = checkSum(buffer.Bytes())
 	//然后清空buffer并把求完校验和的icmp数据报写入其中准备发送
 	buffer.Reset()
-	binary.Write(&buffer, binary.BigEndian, icmp)
+	_ = binary.Write(&buffer, binary.BigEndian, icmp)
 
 	conn, err := net.DialTimeout("ip4:icmp", ip.String(), 1*time.Second)
 	if err != nil {
@@ -50,13 +50,13 @@ func Ping(ip net.IP) bool {
 		log.Println("conn.Write error:", err)
 		return false
 	}
-	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 	num, err := conn.Read(recvBuf)
 	if err != nil {
 		return false
 	}
 
-	conn.SetReadDeadline(time.Time{})
+	_ = conn.SetReadDeadline(time.Time{})
 
 	return string(recvBuf[0:num]) != ""
 }
@@ -64,7 +64,7 @@ func Ping(ip net.IP) bool {
 func checkSum(data []byte) uint16 {
 	var (
 		sum    uint32
-		length int = len(data)
+		length = len(data)
 		index  int
 	)
 	for length > 1 {
@@ -75,7 +75,7 @@ func checkSum(data []byte) uint16 {
 	if length > 0 {
 		sum += uint32(data[index])
 	}
-	sum += (sum >> 16)
+	sum += sum >> 16
 
 	return uint16(^sum)
 }
