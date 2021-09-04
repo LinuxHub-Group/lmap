@@ -20,20 +20,23 @@ package lmap
 
 import "net"
 
-func GetAllIPsFromCIDR(cidr string) ([]net.IP, error) {
-	ip, ipnet, err := net.ParseCIDR(cidr)
+func GetAllIPsFromCIDR(cidr string) ([]HostInfo, error) {
+	ip, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, err
 	}
 
-	var ips []net.IP
-	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
-		ips = append(ips, dupIP(ip))
+	var ips []HostInfo
+	for ip := ip.Mask(ipNet.Mask); ipNet.Contains(ip); inc(ip) {
+		ips = append(ips, HostInfo{
+			host:   dupIP(ip),
+			isUsed: false,
+		})
 	}
 	if len(ips) <= 2 {
 		return ips, nil
 	}
-	return ips[1 : len(ips)-1], nil
+	return ips[0 : len(ips)-1], nil
 }
 
 func inc(ip net.IP) {

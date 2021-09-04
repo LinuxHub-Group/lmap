@@ -18,10 +18,17 @@
 
 package lmap
 
+import "net"
+
 type ICMP struct {
 	Type        uint8
 	Code        uint8
 	Checksum    uint16
 	Identifier  uint16
 	SequenceNum uint16
+}
+
+type HostInfo struct {
+	host   net.IP
+	isUsed bool
 }

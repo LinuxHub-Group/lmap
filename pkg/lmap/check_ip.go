@@ -20,64 +20,55 @@ package lmap
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"sync"
 	"time"
 )
 
-const OUTPUT_IP_PER_LINE = 5
+const OUTPUT_IP_PER_LINE = 3
 
 func CheckIP(subnet string, isVerbose bool) {
 	checkerGroup := &sync.WaitGroup{}
 	t := time.Now()
 	hosts, _ := GetAllIPsFromCIDR(subnet)
-	isUsedList := make([]bool, len(hosts))
-	for index, _ := range hosts {
+	for index := range hosts {
 		time.Sleep(500)
 		checkerGroup.Add(1)
+
 		go func(index int) {
 			defer checkerGroup.Done()
-			isUsed := Ping(hosts[index])
-			isUsedList[index] = isUsed
+			hosts[index].isUsed = Ping(hosts[index].host)
 			if isVerbose {
-				if isUsed {
-					println("已使用IP：", hosts[index].String())
+				if hosts[index].isUsed {
+					println("已使用IP：", hosts[index].host.String())
 				} else {
-					println("未使用IP：", hosts[index].String())
+					println("未使用IP：", hosts[index].host.String())
 				}
 			}
 		}(index)
 	}
 	checkerGroup.Wait()
 	elapsed := time.Since(t)
-	fmt.Fprintln(os.Stderr, "IP扫描完成,耗时", elapsed)
-	println("已使用IP：")
-	printIPList(hosts, true, isUsedList)
-	println("未使用IP：")
-	printIPList(hosts, false, isUsedList)
+	_, _ = fmt.Fprintln(os.Stderr, "IP扫描完成,耗时", elapsed)
+	fmt.Println("已使用IP：")
+	printIPList(hosts, true)
+	fmt.Println("未使用IP：")
+	printIPList(hosts, false)
 }
 
-func printIPList(hosts []net.IP, boolFilter bool, boolFilterTargetList []bool) {
-	firstIndex := 0
-	count := 0
-	for index, ip := range hosts {
-		if boolFilterTargetList[index] == boolFilter {
-			fmt.Print(ip.String())
-			firstIndex = index
-			count = 1
-			break
-		}
-	}
-	for index := firstIndex + 1; index < len(hosts); index++ {
-		if boolFilterTargetList[index] == boolFilter {
-			if count%OUTPUT_IP_PER_LINE == 0 {
-				fmt.Println("")
+func printIPList(hosts []HostInfo, boolFilter bool) {
+
+	position := 1
+
+	for _,hostInfo :=range hosts{
+		if boolFilter==hostInfo.isUsed {
+			fmt.Print(hostInfo.host.String())
+			if position%OUTPUT_IP_PER_LINE == 0 {
+				fmt.Println()
 			} else {
 				fmt.Print(", ")
 			}
-			fmt.Print(hosts[index].String())
-			count++
+			position++
 		}
 	}
 	fmt.Println("")
