@@ -1,5 +1,5 @@
 /*
- *
+ *     lmap (LinuxHub's Nmap) is the nmap next generation pro plus max.
  *     Copyright (C) <2021>  <LinuxHub-Group>
  *
  *     This program is free software: you can redistribute it and/or modify
