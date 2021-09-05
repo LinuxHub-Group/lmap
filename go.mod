@@ -1,3 +1,3 @@
 module github.com/LinuxHub-Group/lmap
 
-go 1.17
+go 1.16

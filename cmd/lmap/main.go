@@ -21,8 +21,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/LinuxHub-Group/lmap/pkg/lmap"
 	"os"
+
+	"github.com/LinuxHub-Group/lmap/pkg/lmap"
 )
 
 func main() {
