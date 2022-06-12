@@ -1,6 +1,6 @@
 /*
  *     lmap (LinuxHub's Nmap) is the nmap next generation pro plus max.
- *     Copyright (C) <2021>  <LinuxHub-Group>
+ *     Copyright (C) <2022>  <LinuxHub-Group>
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -18,9 +18,14 @@
 
 package lmap
 
-import "net"
+import (
+	"github.com/ysmood/got"
+	"net"
+	"testing"
+)
 
-type HostInfo struct {
-	host   net.IP
-	isUsed bool
+func TestPing(t *testing.T) {
+	ip := net.ParseIP("192.168.0.106")
+	res := Ping(ip)
+	got.T(t).True(res)
 }

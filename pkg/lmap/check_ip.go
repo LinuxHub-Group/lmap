@@ -32,7 +32,7 @@ func CheckIP(subnet string, isVerbose bool) {
 	t := time.Now()
 	hosts, _ := GetAllIPsFromCIDR(subnet)
 	for index := range hosts {
-		time.Sleep(500)
+		//time.Sleep(500)
 		checkerGroup.Add(1)
 
 		go func(index int) {

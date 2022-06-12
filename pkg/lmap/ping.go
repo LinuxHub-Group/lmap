@@ -19,63 +19,73 @@
 package lmap
 
 import (
-	"bytes"
 	"encoding/binary"
+	"golang.org/x/net/icmp"
 	"log"
 	"net"
 	"time"
 )
 
 func Ping(ip net.IP) bool {
-	var icmp ICMP
-	//开始填充数据包
-	icmp.Type = 8 //8->echo message  0->reply message
+	recvBuf := make([]byte, 8)
 
-	recvBuf := make([]byte, 32)
-	var buffer bytes.Buffer
+	// Start listening for icmp replies
+	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 
-	//先在buffer中写入icmp数据报求去校验和
-	_ = binary.Write(&buffer, binary.BigEndian, icmp)
-	icmp.Checksum = checkSum(buffer.Bytes())
-	//然后清空buffer并把求完校验和的icmp数据报写入其中准备发送
-	buffer.Reset()
-	_ = binary.Write(&buffer, binary.BigEndian, icmp)
-
-	conn, err := net.DialTimeout("ip4:icmp", ip.String(), 1*time.Second)
 	if err != nil {
+		log.Println("dial error:", err)
 		return false
 	}
-	_, err = conn.Write(buffer.Bytes())
+	defer conn.Close()
+
+	sendBytes := []byte{8, 0, 247, 255, 0, 0, 0, 0}
+	//expectCheckSum := int(checkSum([]byte{0, 0, 0, 0, 0, 0, 0, 0}))
+	expectCheckSum := 65535
+
+	_, err = conn.WriteTo(sendBytes, &net.IPAddr{
+		IP: ip,
+	})
 	if err != nil {
-		log.Println("conn.Write error:", err)
 		return false
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 2))
-	num, err := conn.Read(recvBuf)
+
+	_, _, err = conn.ReadFrom(recvBuf)
 	if err != nil {
 		return false
 	}
 
+	recvType := recvBuf[0]
+	recvCheckSum := int(binary.BigEndian.Uint16(recvBuf[2:4]))
+
 	_ = conn.SetReadDeadline(time.Time{})
 
-	return string(recvBuf[0:num]) != ""
+	if recvType != 0 {
+		return false
+	}
+
+	if recvCheckSum != expectCheckSum {
+		return false
+	}
+
+	return true
 }
 
-func checkSum(data []byte) uint16 {
-	var (
-		sum    uint32
-		length = len(data)
-		index  int
-	)
-	for length > 1 {
-		sum += uint32(data[index])<<8 + uint32(data[index+1])
-		index += 2
-		length -= 2
-	}
-	if length > 0 {
-		sum += uint32(data[index])
-	}
-	sum += sum >> 16
-
-	return uint16(^sum)
-}
+//func checkSum(data []byte) uint16 {
+//	var (
+//		sum    uint32
+//		length = len(data)
+//		index  int
+//	)
+//	for length > 1 {
+//		sum += uint32(data[index])<<8 + uint32(data[index+1])
+//		index += 2
+//		length -= 2
+//	}
+//	if length > 0 {
+//		sum += uint32(data[index])
+//	}
+//	sum += sum >> 16
+//
+//	return uint16(^sum)
+//}
