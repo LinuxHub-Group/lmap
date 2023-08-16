@@ -6,29 +6,26 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Setup go
-      uses: actions/setup-go@v2
-      with:
-        go-version: '^1.16'
-    - run: |
-        # https://github.com/actions/setup-go/issues/107
-        cp -f `which go` /usr/bin/go
+      - name: Setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "^1.16"
 
-    - name: check fmt
-      run: |
-        make fmt-check
-      
-    - name: vet
-      run: |
-        make vet
+      - name: check fmt
+        run: |
+          make fmt-check
 
-    - name: test
-      run: |
-        make test
+      - name: vet
+        run: |
+          make vet
 
-    - name: build
-      run: |
-        make
+      - name: test
+        run: |
+          make test
+
+      - name: build
+        run: |
+          make
