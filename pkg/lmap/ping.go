@@ -19,15 +19,27 @@
 package lmap
 
 import (
-	"encoding/binary"
-	"golang.org/x/net/icmp"
 	"log"
 	"net"
 	"time"
+
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 )
 
 func Ping(ip net.IP) bool {
-	recvBuf := make([]byte, 8)
+	msg := icmp.Message{
+		Type: ipv4.ICMPTypeEcho,
+		Code: 0,
+		Body: &icmp.RawBody{
+			Data: ip,
+		},
+	}
+
+	sendBytes, err := msg.Marshal(nil)
+	if err != nil {
+		log.Println("marshal icmp message", err)
+	}
 
 	// Start listening for icmp replies
 	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -38,10 +50,6 @@ func Ping(ip net.IP) bool {
 	}
 	defer conn.Close()
 
-	sendBytes := []byte{8, 0, 247, 255, 0, 0, 0, 0}
-	//expectCheckSum := int(checkSum([]byte{0, 0, 0, 0, 0, 0, 0, 0}))
-	expectCheckSum := 65535
-
 	_, err = conn.WriteTo(sendBytes, &net.IPAddr{
 		IP: ip,
 	})
@@ -50,42 +58,15 @@ func Ping(ip net.IP) bool {
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 
-	_, _, err = conn.ReadFrom(recvBuf)
-	if err != nil {
-		return false
+	for {
+		recvBuf := make([]byte, 20)
+		_, addr, err := conn.ReadFrom(recvBuf)
+		if err != nil {
+			return false
+		}
+
+		if addr.String() == ip.String() {
+			return true
+		}
 	}
-
-	recvType := recvBuf[0]
-	recvCheckSum := int(binary.BigEndian.Uint16(recvBuf[2:4]))
-
-	_ = conn.SetReadDeadline(time.Time{})
-
-	if recvType != 0 {
-		return false
-	}
-
-	if recvCheckSum != expectCheckSum {
-		return false
-	}
-
-	return true
 }
-
-//func checkSum(data []byte) uint16 {
-//	var (
-//		sum    uint32
-//		length = len(data)
-//		index  int
-//	)
-//	for length > 1 {
-//		sum += uint32(data[index])<<8 + uint32(data[index+1])
-//		index += 2
-//		length -= 2
-//	}
-//	if length > 0 {
-//		sum += uint32(data[index])
-//	}
-//	sum += sum >> 16
-//
-//	return uint16(^sum)
-//}
