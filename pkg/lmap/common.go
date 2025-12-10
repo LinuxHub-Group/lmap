@@ -20,7 +20,10 @@ package lmap
 
 import "net"
 
+// HostInfo represents information about a host in the network
 type HostInfo struct {
-	host   net.IP
+	// host is the IP address of the host
+	host net.IP
+	// isUsed indicates whether the host is active/responding
 	isUsed bool
 }

@@ -28,12 +28,51 @@ import (
 
 func main() {
 	isVerbose := false
-	flag.BoolVar(&isVerbose, "v", false, "be verbose")
+	flag.BoolVar(&isVerbose, "v", false, "详细输出")
+
+	subnets := multiArg{}
+	flag.Var(&subnets, "subnet", "要扫描的网络段，CIDR格式 (可多次指定)")
+
+	excludes := multiArg{}
+	flag.Var(&excludes, "exclude", "要排除的IP或子网 (可多次指定)")
+
 	flag.Parse()
-	args := flag.Args()
-	if len(args) < 1 {
-		_, _ = fmt.Fprintf(os.Stderr, "使用方法：%s [-v] <网络号>/<CIDR>\n", os.Args[0])
-		os.Exit(-1)
+
+	if len(subnets) < 1 {
+		printUsage()
+		os.Exit(1)
 	}
-	lmap.CheckIP(args[0], isVerbose)
+
+	lmap.CheckIP(subnets, excludes, isVerbose)
+}
+
+// printUsage prints the usage information for the program
+func printUsage() {
+	progName := os.Args[0]
+	if progName == "" {
+		progName = "lmap"
+	}
+
+	fmt.Fprintf(os.Stderr, "使用方法: %s [选项] -subnet <网络号>/<CIDR> [-subnet ...]\n", progName)
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "选项:")
+	flag.PrintDefaults()
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "示例:")
+	fmt.Fprintf(os.Stderr, "  %s -subnet 192.168.1.0/24\n", progName)
+	fmt.Fprintf(os.Stderr, "  %s -subnet 192.168.1.0/24 -subnet 10.0.0.0/16\n", progName)
+	fmt.Fprintf(os.Stderr, "  %s -subnet 192.168.1.0/24 -exclude 192.168.1.1\n", progName)
+	fmt.Fprintf(os.Stderr, "  %s -subnet 192.168.1.0/24 -exclude 192.168.1.10/32 -v\n", progName)
+}
+
+// multiArg implements the flag.Value interface for collecting multiple string values
+type multiArg []string
+
+func (m *multiArg) String() string {
+	return fmt.Sprintf("%v", *m)
+}
+
+func (m *multiArg) Set(value string) error {
+	*m = append(*m, value)
+	return nil
 }

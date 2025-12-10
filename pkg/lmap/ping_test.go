@@ -29,3 +29,19 @@ func TestPing(t *testing.T) {
 	res := Ping(ip)
 	got.T(t).True(res)
 }
+
+func TestPingWithInvalidIP(t *testing.T) {
+	// 测试无效IP的情况
+	invalidIP := net.ParseIP("0.0.0.0")
+	res := Ping(invalidIP)
+	// 对于无效IP，期望返回false
+	got.T(t).False(res)
+}
+
+func TestPingWithLocalhost(t *testing.T) {
+	// 测试本地回环地址
+	localhost := net.ParseIP("127.0.0.1")
+	res := Ping(localhost)
+	// 本地回环地址通常应该返回true
+	got.T(t).True(res)
+}
