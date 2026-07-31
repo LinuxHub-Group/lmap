@@ -25,8 +25,9 @@ import (
 )
 
 func TestPing(t *testing.T) {
-	// 使用公网稳定地址,避免依赖本地网络环境
-	ip := net.ParseIP("1.1.1.1")
+	// 使用回环地址:不依赖出站网络(GitHub Actions 禁止出站 ICMP),
+	// 也不依赖本地局域网环境
+	ip := net.ParseIP("127.0.0.1")
 	res := Ping(ip)
 	got.T(t).True(res)
 }
@@ -38,12 +39,4 @@ func TestPingWithInvalidIP(t *testing.T) {
 	res := Ping(invalidIP)
 	// 对于不可达IP，期望返回false
 	got.T(t).False(res)
-}
-
-func TestPingWithLocalhost(t *testing.T) {
-	// 测试本地回环地址
-	localhost := net.ParseIP("127.0.0.1")
-	res := Ping(localhost)
-	// 本地回环地址通常应该返回true
-	got.T(t).True(res)
 }
