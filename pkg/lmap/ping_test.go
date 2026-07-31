@@ -25,23 +25,18 @@ import (
 )
 
 func TestPing(t *testing.T) {
-	ip := net.ParseIP("192.168.0.106")
+	// 使用回环地址:不依赖出站网络(GitHub Actions 禁止出站 ICMP),
+	// 也不依赖本地局域网环境
+	ip := net.ParseIP("127.0.0.1")
 	res := Ping(ip)
 	got.T(t).True(res)
 }
 
 func TestPingWithInvalidIP(t *testing.T) {
-	// 测试无效IP的情况
-	invalidIP := net.ParseIP("0.0.0.0")
+	// 测试不可达IP的情况
+	// 192.0.2.1 是 IANA 保留的 TEST-NET-1 地址,不会被真实路由响应
+	invalidIP := net.ParseIP("192.0.2.1")
 	res := Ping(invalidIP)
-	// 对于无效IP，期望返回false
+	// 对于不可达IP，期望返回false
 	got.T(t).False(res)
-}
-
-func TestPingWithLocalhost(t *testing.T) {
-	// 测试本地回环地址
-	localhost := net.ParseIP("127.0.0.1")
-	res := Ping(localhost)
-	// 本地回环地址通常应该返回true
-	got.T(t).True(res)
 }
