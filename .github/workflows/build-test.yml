@@ -24,7 +24,7 @@ jobs:
 
       - name: test
         run: |
-          make test
+          sudo make test
 
       - name: build
         run: |

@@ -42,7 +42,7 @@ install:
 	@go mod tidy
 
 test:
-	@go test -cpu=1,2,4 -v -tags integration ./...
+	@go test -cpu=1,2,4 -v ./...
 
 vet:
 	@$(foreach n, $(packages),\
